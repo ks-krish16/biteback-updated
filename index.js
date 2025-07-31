@@ -6,6 +6,9 @@ const bodyParser = require("body-parser");
 const multer = require("multer");
 const supabase = require("./supabaseClient");
 require("dotenv").config();
+const cors = require("cors");
+app.use(cors());
+
 
 const port=8080;
 const storage = multer.memoryStorage(); 
@@ -49,7 +52,6 @@ app.get("/posts", (req, res) => {
     res.render("allpost.ejs");
 });
 
-
 app.post("/signup", async (req, res) => {
     const { username, email, password } = req.body;
 
@@ -58,14 +60,22 @@ app.post("/signup", async (req, res) => {
         .select("*")
         .eq("email", email);
 
-    if (selectError) return res.json({ message: "Error occurred" });
-    if (existingUser.length > 0) return res.json({ message: "Email already exists" });
+    if (selectError) {
+        console.error("Supabase SELECT error:", selectError);
+        return res.json({ message: "Database error during email check" });
+    }
+
+    if (existingUser.length > 0)
+        return res.json({ message: "Email already exists" });
 
     const { data, error } = await supabase
         .from("users")
         .insert([{ username, email, password }]);
 
-    if (error) return res.json({ success: false, message: "Error occurred" });
+    if (error) {
+        console.error("Supabase INSERT error:", error);
+        return res.json({ success: false, message: "Error occurred while inserting" });
+    }
 
     res.json({ success: true, message: "User registered successfully", username, email });
 });
@@ -117,16 +127,21 @@ app.post("/upload", upload.single("image"), async (req, res) => {
         image
       }]);
 
-    if (error) {
-      console.error("Supabase insert error:", error);
-      return res.status(500).json({ message: "Error uploading post", error });
-    }
+ if (error) {
+  console.error("🔥 Supabase INSERT error:", error.message || error);
+  return res.status(500).json({ message: "Error uploading post", detail: error.message || error });
+}
 
-    res.json({ message: "Post uploaded successfully!", id: data[0].id });
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    res.status(500).json({ message: "Unexpected server error" });
-  }
+
+
+    res.json({ message: "Post uploaded successfully!", id: data?.[0]?.id || null });
+console.log("✅ Post uploaded successfully:", data);
+
+} catch (err) {
+  console.error("❌ Unexpected server error:", err.message);
+  res.status(500).json({ message: "Unexpected server error", detail: err.message });
+}
+
 });
 
 
@@ -178,6 +193,16 @@ app.get("/allpost", async (req, res) => {
 
     res.json(posts);
 });
+
+app.get("/test-db", async (req, res) => {
+    const { data, error } = await supabase.from("users").select("*").limit(1);
+    if (error) {
+        console.error("Test DB error:", error);
+        return res.status(500).json({ error: "Supabase connection failed", detail: error.message });
+    }
+    res.json({ message: "Supabase works!", data });
+});
+
 
 app.listen(port,()=>{
     console.log(`listening to ${port}`)
