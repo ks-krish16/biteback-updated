@@ -112,7 +112,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
 
   console.log("Uploading:", { user, foodname, quantity, description, contact, image: image ? "[base64]" : null });
 
-  // Parse quantity as integer (adjust if you want it as string)
+ 
   const parsedQuantity = parseInt(quantity);
 
   try {
@@ -128,17 +128,17 @@ app.post("/upload", upload.single("image"), async (req, res) => {
       }]);
 
  if (error) {
-  console.error("🔥 Supabase INSERT error:", error.message || error);
+  console.error("Supabase INSERT error:", error.message || error);
   return res.status(500).json({ message: "Error uploading post", detail: error.message || error });
 }
 
 
 
     res.json({ message: "Post uploaded successfully!", id: data?.[0]?.id || null });
-console.log("✅ Post uploaded successfully:", data);
+
 
 } catch (err) {
-  console.error("❌ Unexpected server error:", err.message);
+  console.error("Unexpected server error:", err.message);
   res.status(500).json({ message: "Unexpected server error", detail: err.message });
 }
 
@@ -194,14 +194,6 @@ app.get("/allpost", async (req, res) => {
     res.json(posts);
 });
 
-app.get("/test-db", async (req, res) => {
-    const { data, error } = await supabase.from("users").select("*").limit(1);
-    if (error) {
-        console.error("Test DB error:", error);
-        return res.status(500).json({ error: "Supabase connection failed", detail: error.message });
-    }
-    res.json({ message: "Supabase works!", data });
-});
 
 
 app.listen(port,()=>{
